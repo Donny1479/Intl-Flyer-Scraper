@@ -41,6 +41,13 @@ def format_display_date(value: str | None) -> str:
     return parsed.strftime("%b %d, %Y")
 
 
+def flyer_display_url(url: str | None, page: str | None) -> str:
+    if not url:
+        return ""
+    page_label = f"Page {page}" if page else "Page"
+    return f"{url}#{page_label}"
+
+
 def offers_to_df(offers: list[dict]) -> pd.DataFrame:
     if not offers:
         return pd.DataFrame(
@@ -48,6 +55,7 @@ def offers_to_df(offers: list[dict]) -> pd.DataFrame:
                 "Image",
                 "Month",
                 "Offer Start",
+                "Valid Until",
                 "Retailer",
                 "Item",
                 "Price",
@@ -58,7 +66,6 @@ def offers_to_df(offers: list[dict]) -> pd.DataFrame:
                 "Product",
                 "Flyer Title",
                 "Flyer Page",
-                "Valid Until",
                 "Scraped At",
                 "Month Key",
             ]
@@ -70,17 +77,23 @@ def offers_to_df(offers: list[dict]) -> pd.DataFrame:
             "Image": df.get("image_url", ""),
             "Month": df.get("offer_month", "Unknown"),
             "Offer Start": df.get("offer_start_date", ""),
+            "Valid Until": df.get("valid_until", ""),
             "Retailer": df.get("retailer", ""),
             "Item": df.get("item", ""),
             "Price": df.get("price", ""),
             "Regular Price": df.get("regular_price", ""),
             "Discount": df.get("discount", ""),
             "Offer Details": df.get("offer_details", ""),
-            "Flyer": df.get("flyer_url", ""),
+            "Flyer": [
+                flyer_display_url(url, page)
+                for url, page in zip(
+                    df.get("flyer_url", [""] * len(df)),
+                    df.get("flyer_page", [""] * len(df)),
+                )
+            ],
             "Product": df.get("product_url", ""),
             "Flyer Title": df.get("flyer_title", ""),
             "Flyer Page": df.get("flyer_page", ""),
-            "Valid Until": df.get("valid_until", ""),
             "Scraped At": df.get("scraped_at", ""),
             "Month Key": df.get("offer_month_key", "unknown"),
         }
@@ -133,6 +146,7 @@ def render_market_section(
             "Image",
             "Month",
             "Offer Start",
+            "Valid Until",
             "Retailer",
             "Item",
             "Price",
@@ -140,10 +154,6 @@ def render_market_section(
             "Discount",
             "Offer Details",
             "Flyer",
-            "Product",
-            "Flyer Title",
-            "Flyer Page",
-            "Valid Until",
         ]
 
         st.dataframe(
@@ -155,17 +165,17 @@ def render_market_section(
                 "Image": st.column_config.ImageColumn("Image", width="small"),
                 "Month": st.column_config.TextColumn("Month", width="small"),
                 "Offer Start": st.column_config.TextColumn("Start", width="small"),
+                "Valid Until": st.column_config.TextColumn("Valid Until", width="small"),
                 "Retailer": st.column_config.TextColumn("Retailer", width="medium"),
                 "Item": st.column_config.TextColumn("Item", width="large"),
                 "Price": st.column_config.TextColumn("Price", width="small"),
                 "Regular Price": st.column_config.TextColumn("Regular", width="small"),
                 "Discount": st.column_config.TextColumn("Discount", width="small"),
                 "Offer Details": st.column_config.TextColumn("Offer Details", width="large"),
-                "Flyer": st.column_config.LinkColumn("Flyer", display_text="Open flyer"),
+                "Flyer": st.column_config.LinkColumn("Flyer", display_text="#(Page.*)$"),
                 "Product": st.column_config.LinkColumn("Product", display_text="Open product"),
                 "Flyer Title": st.column_config.TextColumn("Flyer Title", width="medium"),
                 "Flyer Page": st.column_config.TextColumn("Page", width="small"),
-                "Valid Until": st.column_config.TextColumn("Valid Until", width="small"),
                 "Scraped At": st.column_config.TextColumn("Scraped At", width="medium"),
             },
         )
