@@ -4,12 +4,13 @@ Tim Hortons International Flyer Tracker - Streamlit UI
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
-from scraper import MARKETS, load_offer_data, scrape_market_to_file
+from scraper import MARKETS, load_offer_data
 
 
 APP_DIR = Path(__file__).parent
@@ -30,11 +31,23 @@ def load_logo_svg() -> str:
         return "<strong>Tim Hortons</strong>"
 
 
+def format_display_date(value: str | None) -> str:
+    if not value:
+        return "Not yet"
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value[:10]
+    return parsed.strftime("%b %d, %Y")
+
+
 def offers_to_df(offers: list[dict]) -> pd.DataFrame:
     if not offers:
         return pd.DataFrame(
             columns=[
                 "Image",
+                "Month",
+                "Offer Start",
                 "Retailer",
                 "Item",
                 "Price",
@@ -47,6 +60,7 @@ def offers_to_df(offers: list[dict]) -> pd.DataFrame:
                 "Flyer Page",
                 "Valid Until",
                 "Scraped At",
+                "Month Key",
             ]
         )
 
@@ -54,6 +68,8 @@ def offers_to_df(offers: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "Image": df.get("image_url", ""),
+            "Month": df.get("offer_month", "Unknown"),
+            "Offer Start": df.get("offer_start_date", ""),
             "Retailer": df.get("retailer", ""),
             "Item": df.get("item", ""),
             "Price": df.get("price", ""),
@@ -66,11 +82,24 @@ def offers_to_df(offers: list[dict]) -> pd.DataFrame:
             "Flyer Page": df.get("flyer_page", ""),
             "Valid Until": df.get("valid_until", ""),
             "Scraped At": df.get("scraped_at", ""),
+            "Month Key": df.get("offer_month_key", "unknown"),
         }
     )
 
 
-def render_market_section(market: dict, query: str, selected_retailers: list[str]) -> None:
+def month_sort_key(month_label: str) -> str:
+    try:
+        return datetime.strptime(month_label, "%B %Y").strftime("%Y-%m")
+    except ValueError:
+        return "9999-99"
+
+
+def render_market_section(
+    market: dict,
+    query: str,
+    selected_months: list[str],
+    selected_retailers: list[str],
+) -> None:
     offers = market.get("offers", [])
     df = offers_to_df(offers)
 
@@ -83,11 +112,14 @@ def render_market_section(market: dict, query: str, selected_retailers: list[str
         )
         df = df[mask]
 
+    if selected_months and not df.empty:
+        df = df[df["Month"].isin(selected_months)]
+
     if selected_retailers and not df.empty:
         df = df[df["Retailer"].isin(selected_retailers)]
 
     with st.container():
-        left, right = st.columns([3, 1])
+        left, right = st.columns([4, 1])
         with left:
             st.subheader(market["name"])
         with right:
@@ -97,12 +129,32 @@ def render_market_section(market: dict, query: str, selected_retailers: list[str
             st.info("No offers loaded yet.")
             return
 
+        visible_columns = [
+            "Image",
+            "Month",
+            "Offer Start",
+            "Retailer",
+            "Item",
+            "Price",
+            "Regular Price",
+            "Discount",
+            "Offer Details",
+            "Flyer",
+            "Product",
+            "Flyer Title",
+            "Flyer Page",
+            "Valid Until",
+        ]
+
         st.dataframe(
             df,
             width="stretch",
             hide_index=True,
+            column_order=visible_columns,
             column_config={
                 "Image": st.column_config.ImageColumn("Image", width="small"),
+                "Month": st.column_config.TextColumn("Month", width="small"),
+                "Offer Start": st.column_config.TextColumn("Start", width="small"),
                 "Retailer": st.column_config.TextColumn("Retailer", width="medium"),
                 "Item": st.column_config.TextColumn("Item", width="large"),
                 "Price": st.column_config.TextColumn("Price", width="small"),
@@ -131,28 +183,48 @@ def render_market_section(market: dict, query: str, selected_retailers: list[str
 st.markdown(
     """
     <style>
-    .block-container { padding-top: 1.4rem; }
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 2rem;
+    }
     .th-header {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        margin-bottom: .35rem;
+        gap: .85rem;
+        padding-bottom: .85rem;
+        margin-bottom: .5rem;
+        border-bottom: 1px solid #e5e7eb;
     }
     .th-logo {
-        width: 104px;
+        width: 118px;
         flex: 0 0 auto;
+        overflow: hidden;
+    }
+    .th-logo svg {
+        width: 118px !important;
+        height: auto !important;
+        max-height: 32px;
+        display: block;
     }
     .th-title h1 {
-        font-size: 1.95rem;
+        font-size: 1.45rem;
         margin: 0;
-        line-height: 1.15;
+        line-height: 1.2;
+        font-weight: 750;
     }
     .th-title p {
         margin: .2rem 0 0 0;
         color: #6b7280;
+        font-size: .9rem;
     }
     div[data-testid="stMetricValue"] {
-        font-size: 1.45rem;
+        font-size: 1.2rem;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #6b7280;
+    }
+    .stDownloadButton {
+        margin-top: .35rem;
     }
     </style>
     """,
@@ -164,8 +236,8 @@ st.markdown(
     <div class="th-header">
         <div class="th-logo">{load_logo_svg()}</div>
         <div class="th-title">
-            <h1>International CPG Flyer Tracker</h1>
-            <p>Mexico | Saudi Arabia | Korea</p>
+            <h1>International Flyer Tracker</h1>
+            <p>Tim Hortons CPG offers across Mexico, Saudi Arabia, and Korea</p>
         </div>
     </div>
     """,
@@ -178,17 +250,15 @@ all_offers = [offer for market in markets for offer in market.get("offers", [])]
 all_df = pd.DataFrame(all_offers)
 
 with st.sidebar:
-    st.header("Refresh")
-    if st.button("Scrape Saudi Arabia D4D", type="primary"):
-        with st.spinner("Scraping D4D and validating flyer links..."):
-            data = scrape_market_to_file("saudi-arabia")
-            markets = data.get("markets", [])
-            all_offers = [offer for market in markets for offer in market.get("offers", [])]
-            all_df = pd.DataFrame(all_offers)
-        st.success("Saudi Arabia offers updated.")
-
-    st.divider()
+    st.header("Filters")
     query = st.text_input("Search", placeholder="Item, retailer, offer detail")
+
+    month_options = (
+        sorted(all_df["offer_month"].dropna().unique().tolist(), key=month_sort_key)
+        if not all_df.empty and "offer_month" in all_df
+        else []
+    )
+    selected_months = st.multiselect("Month", month_options, default=month_options)
 
     retailer_options = (
         sorted(all_df["retailer"].dropna().unique().tolist())
@@ -209,7 +279,7 @@ metric_cols[2].metric(
     "Markets With Offers",
     sum(1 for market in markets if market.get("offers")),
 )
-metric_cols[3].metric("Last Updated", data.get("last_updated") or "Not yet")
+metric_cols[3].metric("Last Updated", format_display_date(data.get("last_updated")))
 
 for market_key in ("mexico", "saudi-arabia", "korea"):
     market = next(
@@ -224,4 +294,4 @@ for market_key in ("mexico", "saudi-arabia", "korea"):
             "offers": [],
         },
     )
-    render_market_section(market, query, selected_retailers)
+    render_market_section(market, query, selected_months, selected_retailers)

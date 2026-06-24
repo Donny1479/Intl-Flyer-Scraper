@@ -154,6 +154,28 @@ def number_from_money(text: str) -> float | None:
     return float(match.group(1)) if match else None
 
 
+def infer_d4d_asset_date(*urls: str) -> str:
+    for url in urls:
+        match = re.search(r"/(\d{2})/(\d{2})/(\d{2})/", url or "")
+        if not match:
+            continue
+        year = 2000 + int(match.group(1))
+        month = int(match.group(2))
+        day = int(match.group(3))
+        try:
+            return datetime(year, month, day).date().isoformat()
+        except ValueError:
+            continue
+    return ""
+
+
+def month_label(date_text: str) -> str:
+    try:
+        return datetime.strptime(date_text, "%Y-%m-%d").strftime("%B %Y")
+    except (TypeError, ValueError):
+        return "Unknown"
+
+
 def infer_name_from_card(card: BeautifulSoup, product_id: str) -> str:
     if product_id in PRODUCT_NAME_OVERRIDES:
         return PRODUCT_NAME_OVERRIDES[product_id]
@@ -282,6 +304,13 @@ def parse_d4d_product_card(card: BeautifulSoup, scraped_at: str) -> dict[str, An
     product_details = extract_product_details(product_url)
     validated_flyer_url = product_details.get("go_to_flyer_url") or card.get("data-url", "")
     flyer_details = validate_flyer_details(validated_flyer_url)
+    image_url = card.get("data-image-tr", "")
+    offer_start_date = infer_d4d_asset_date(
+        image_url,
+        flyer_details.get("flyer_image_url", ""),
+        product_url,
+        validated_flyer_url,
+    )
 
     price_value = number_from_money(price)
     regular_value = number_from_money(regular_price)
@@ -317,6 +346,9 @@ def parse_d4d_product_card(card: BeautifulSoup, scraped_at: str) -> dict[str, An
         "currency": product_details.get("schema_currency") or "SAR",
         "discount": discount_pct,
         "offer_details": " | ".join(dict.fromkeys(offer_details)),
+        "offer_start_date": offer_start_date,
+        "offer_month": month_label(offer_start_date),
+        "offer_month_key": offer_start_date[:7] if offer_start_date else "unknown",
         "valid_until": product_details.get("valid_until"),
         "product_url": product_url,
         "flyer_url": validated_flyer_url,
@@ -326,7 +358,7 @@ def parse_d4d_product_card(card: BeautifulSoup, scraped_at: str) -> dict[str, An
         "flyer_page": flyer_details.get("flyer_page"),
         "flyer_total_pages": flyer_details.get("flyer_total_pages"),
         "flyer_image_url": flyer_details.get("flyer_image_url"),
-        "image_url": card.get("data-image-tr", ""),
+        "image_url": image_url,
         "scraped_at": scraped_at,
     }
 
