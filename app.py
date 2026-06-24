@@ -183,48 +183,106 @@ def render_market_section(
 st.markdown(
     """
     <style>
+    :root {
+        --fresh-white: #FFFCF8;
+        --always-red: #C8102E;
+        --donut-cream: #F2E4D4;
+        --french-vanilla: #E7D7AA;
+        --maple-glaze: #9A6437;
+        --warm-red: #8D1727;
+        --roasted-espresso: #3A2020;
+        --soft-border: #E8D8C8;
+        --muted-text: #725C52;
+    }
+    .stApp {
+        background:
+            linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 244, 236, 0.95) 100%);
+    }
     .block-container {
-        padding-top: 1rem;
+        padding-top: 1.15rem;
         padding-bottom: 2rem;
+        max-width: 1380px;
     }
     .th-header {
         display: flex;
         align-items: center;
-        gap: .85rem;
-        padding-bottom: .85rem;
-        margin-bottom: .5rem;
-        border-bottom: 1px solid #e5e7eb;
+        gap: 1rem;
+        padding: .9rem 1rem;
+        margin-bottom: .75rem;
+        border: 1px solid var(--soft-border);
+        border-left: 5px solid var(--always-red);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, .72);
     }
     .th-logo {
-        width: 118px;
+        width: 126px;
         flex: 0 0 auto;
         overflow: hidden;
     }
     .th-logo svg {
-        width: 118px !important;
+        width: 126px !important;
         height: auto !important;
-        max-height: 32px;
+        max-height: 34px;
         display: block;
     }
     .th-title h1 {
-        font-size: 1.45rem;
+        color: var(--roasted-espresso);
+        font-size: 1.5rem;
         margin: 0;
         line-height: 1.2;
-        font-weight: 750;
+        font-weight: 760;
     }
     .th-title p {
-        margin: .2rem 0 0 0;
-        color: #6b7280;
+        margin: .24rem 0 0 0;
+        color: var(--muted-text);
         font-size: .9rem;
     }
+    h2, h3 {
+        color: var(--roasted-espresso);
+    }
+    [data-testid="stSidebar"] {
+        background: #F6E9DB;
+        border-right: 1px solid var(--soft-border);
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: var(--warm-red);
+    }
+    [data-testid="stMetric"] {
+        background: rgba(255, 255, 255, .68);
+        border: 1px solid var(--soft-border);
+        border-radius: 8px;
+        padding: .75rem .85rem;
+    }
     div[data-testid="stMetricValue"] {
-        font-size: 1.2rem;
+        color: var(--warm-red);
+        font-size: 1.18rem;
     }
     div[data-testid="stMetricLabel"] {
-        color: #6b7280;
+        color: var(--muted-text);
     }
     .stDownloadButton {
         margin-top: .35rem;
+    }
+    .stDownloadButton button {
+        border-color: var(--always-red);
+        color: var(--always-red);
+        background: rgba(255, 255, 255, .75);
+    }
+    .stDownloadButton button:hover {
+        border-color: var(--warm-red);
+        color: var(--warm-red);
+        background: #FFF7EF;
+    }
+    div[data-testid="stDataFrame"] {
+        border: 1px solid var(--soft-border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #FFFFFF;
+    }
+    .stAlert {
+        border-radius: 8px;
     }
     </style>
     """,
@@ -237,7 +295,7 @@ st.markdown(
         <div class="th-logo">{load_logo_svg()}</div>
         <div class="th-title">
             <h1>International Flyer Tracker</h1>
-            <p>Tim Hortons CPG offers across Mexico, Saudi Arabia, and Korea</p>
+            <p>Tim Hortons CPG offer tracking across Mexico, Saudi Arabia, and Korea</p>
         </div>
     </div>
     """,
