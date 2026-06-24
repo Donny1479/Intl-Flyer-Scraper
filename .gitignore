@@ -1,0 +1,19 @@
+# Local secrets - never commit real secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Streamlit local secrets
+.streamlit/secrets.toml
+
+# Temporary scrape artifacts
+data/tmp_images/
+
+# OS
+.DS_Store
+Thumbs.db
